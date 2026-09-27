@@ -1,24 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function InteractiveBackground() {
-  const [mouse, setMouse] = useState({ x: 50, y: 50 });
-
   useEffect(() => {
-    const handleMouseMove = (event) => {
-      setMouse({
-        x: (event.clientX / window.innerWidth) * 100,
-        y: (event.clientY / window.innerHeight) * 100,
+    const root = document.documentElement;
+    let frame = 0;
+
+    const update = (event) => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        root.style.setProperty("--mouse-x", `${event.clientX}px`);
+        root.style.setProperty("--mouse-y", `${event.clientY}px`);
+        frame = 0;
       });
     };
 
-    window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    const reset = () => {
+      root.style.setProperty("--mouse-x", "50vw");
+      root.style.setProperty("--mouse-y", "50vh");
+    };
+
+    window.addEventListener("pointermove", update, { passive: true });
+    window.addEventListener("blur", reset);
+
+    return () => {
+      window.removeEventListener("pointermove", update);
+      window.removeEventListener("blur", reset);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[var(--background)] transition-colors duration-300">
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[var(--background)]">
       <div
         className="absolute inset-0 opacity-70"
         style={{
@@ -29,26 +43,21 @@ export default function InteractiveBackground() {
         }}
       />
 
+      {/* Lightweight grain: one tiny repeated SVG instead of a large animated filter. */}
       <div
-        className="absolute -inset-1/2 opacity-[0.025] dark:opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.018] dark:opacity-[0.028]"
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.5'/%3E%3C/svg%3E\")",
-          transform: "rotate(3deg)",
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E\")",
         }}
       />
 
-      <div
-        className="absolute h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[35px] opacity-60 transition-[left,top] duration-200 ease-out"
-        style={{
-          left: `${mouse.x}%`,
-          top: `${mouse.y}%`,
-          background: "radial-gradient(circle, var(--glow-color), transparent 68%)",
-        }}
-      />
+      {/* Mouse glow remains, but its position is updated once per animation frame via CSS variables. */}
+      <div className="mouse-glow absolute h-[420px] w-[420px] rounded-full opacity-50 blur-[42px]" />
 
-      <div className="absolute -left-[180px] -top-[220px] h-[480px] w-[480px] animate-[float-orb_14s_ease-in-out_infinite] rounded-full bg-primary opacity-[0.12] blur-[120px]" />
-      <div className="absolute -bottom-[220px] -right-[220px] h-[480px] w-[480px] animate-[float-orb_14s_ease-in-out_infinite] rounded-full bg-secondary opacity-[0.12] blur-[120px] [animation-delay:-7s]" />
+      {/* Floating orbs are transform-only animations, so layout is not recalculated. */}
+      <div className="absolute -left-[180px] -top-[220px] h-[420px] w-[420px] animate-[float-orb-slow_18s_ease-in-out_infinite] rounded-full bg-primary opacity-[0.11] blur-[90px] will-change-transform" />
+      <div className="absolute -bottom-[220px] -right-[220px] h-[420px] w-[420px] animate-[float-orb-slow_20s_ease-in-out_infinite] rounded-full bg-secondary opacity-[0.11] blur-[90px] [animation-delay:-8s] will-change-transform" />
     </div>
   );
 }

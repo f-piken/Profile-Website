@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const navItems = [
   { label: "Home", id: "home" },
@@ -11,10 +12,12 @@ const navItems = [
 ];
 
 export default function Navbar() {
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const [theme, setTheme] = useState("dark");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [themeWipe, setThemeWipe] = useState(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "dark";
@@ -25,55 +28,104 @@ export default function Navbar() {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
 
-    const sections = navItems
-      .map((item) => document.getElementById(item.id))
-      .filter(Boolean);
+    // A viewport-position based active section works more reliably on mobile
+    // than relying only on IntersectionObserver thresholds.
+    let frame = 0;
+    const updateActiveSection = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        const marker = window.innerHeight * 0.35;
+        let current = "home";
+        let closest = Number.POSITIVE_INFINITY;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        navItems.forEach((item) => {
+          const section = document.getElementById(item.id);
+          if (!section) return;
+          const rect = section.getBoundingClientRect();
+          const distance = Math.abs(rect.top - marker);
+          if (rect.top <= marker + 40 && rect.bottom >= marker - 40 && distance < closest) {
+            closest = distance;
+            current = item.id;
+          }
+        });
 
-        if (visible[0]) setActiveSection(visible[0].target.id);
-      },
-      { threshold: [0.2, 0.4, 0.6], rootMargin: "-20% 0px -50% 0px" },
-    );
+        // Keep the last section active when the user reaches the bottom.
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
+          const available = [...navItems].reverse().find((item) => document.getElementById(item.id));
+          if (available) current = available.id;
+        }
 
-    sections.forEach((section) => observer.observe(section));
+        setActiveSection(current);
+        frame = 0;
+      });
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      observer.disconnect();
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+      if (frame) window.cancelAnimationFrame(frame);
     };
   }, []);
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("theme", next);
+    const applyTheme = () => {
+      setTheme(next);
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("theme", next);
+    };
+
+    // Use the browser's View Transition API when available. The new theme
+    // expands from the top-right corner, avoiding the double-render glitch.
+    if (typeof document.startViewTransition === "function") {
+      document.startViewTransition(applyTheme);
+      return;
+    }
+
+    // Smooth fallback for older browsers.
+    const wipeColor = next === "dark" ? "#0f0f12" : "#f5f6fb";
+    setThemeWipe(wipeColor);
+    window.setTimeout(applyTheme, 360);
+    window.setTimeout(() => setThemeWipe(null), 820);
   };
 
   const goTo = (id) => {
+    setActiveSection(id);
     setMobileOpen(false);
+    const target = document.getElementById(id);
 
-    document.getElementById(id)?.scrollIntoView({
-      behavior: "smooth",
-    });
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    router.push(`/#${id}`);
   };
 
   return (
-    <nav
+    <>
+      {themeWipe && (
+        <div
+          className="theme-wipe is-active"
+          style={{ "--theme-wipe-color": themeWipe }}
+          aria-hidden="true"
+        />
+      )}
+      <nav
       className={`fixed left-1/2 top-3 z-50 w-[calc(100%-24px)] max-w-content -translate-x-1/2 transition-all duration-300 sm:top-5 sm:w-[calc(100%-32px)] ${
         scrolled ? "top-2 sm:top-3" : ""
       }`}
     >
-      <div className="rounded-4xl border border-border bg-[color:var(--surface)]/85 px-8 shadow-[var(--shadow-soft)] backdrop-blur-xl transition-colors duration-300">
+      <div className="rounded-4xl border border-border bg-[color:var(--surface)]/85 px-8 shadow-[var(--shadow-soft)] backdrop-blur-md transition-colors duration-300">
         <div className="flex min-h-14 items-center gap-2 sm:min-h-16 sm:gap-3">
           <button
             onClick={() => goTo("home")}
-            className="group grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary font-display text-sm font-extrabold text-white shadow-[0_0_28px_var(--glow-color)] transition hover:scale-105 sm:h-11 sm:w-11"
+            className="group grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary font-display text-sm font-extrabold text-white shadow-[0_0_18px_var(--glow-color)] transition hover:scale-105 sm:h-11 sm:w-11"
             aria-label="Go to home"
           >
             F
@@ -142,6 +194,7 @@ export default function Navbar() {
           </div>
         )}
       </div>
-    </nav>
+      </nav>
+    </>
   );
 }

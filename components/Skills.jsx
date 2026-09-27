@@ -1,92 +1,59 @@
-const skillGroups = [
-  {
-    icon: "✎",
-    title: "Product Design",
-    color: "primary",
-    description: "Human-centric workflows, rapid prototyping, wireframing, and multi-platform design systems.",
-    skills: [["Figma Tokens", 98], ["UX Architecture", 92], ["Prototyping", 95]],
-    tags: ["Design Tokens", "User Journeys"],
-  },
-  {
-    icon: "⌘",
-    title: "Frontend Dev",
-    color: "tertiary",
-    description: "Component architectures, micro-frontends, accessible HTML5 semantics, and type safety.",
-    skills: [["React & Next.js", 95], ["TypeScript", 90], ["Tailwind CSS", 96]],
-    tags: ["State Machines", "REST/GraphQL"],
-  },
-  {
-    icon: "◌",
-    title: "Motion & 3D",
-    color: "secondary",
-    description: "Tactile feedback loops, procedural shader rendering, and performant web graphics.",
-    skills: [["Three.js / WebGL", 84], ["Framer Motion", 92], ["GSAP Animations", 88]],
-    tags: ["GLTF Rigging", "Canvas2D"],
-  },
-  {
-    icon: "⚒",
-    title: "Tools & Pipeline",
-    color: "primary",
-    description: "Modern developer ergonomics, build optimizations, linting chains, and CI/CD automation.",
-    skills: [["Git & CI/CD", 90], ["Storybook Systems", 94], ["Web Vitals Audit", 89]],
-    tags: ["Docker", "Vercel Edge"],
-  },
-];
+import Link from "next/link";
+import SkillLogo from "./SkillLogo";
+import { skills } from "@/data/skills";
+import Reveal from "./Reveal";
 
-const colorMap = {
-  primary: "bg-primary text-white",
-  secondary: "bg-secondary text-white",
-  tertiary: "bg-tertiary text-neutral",
-};
-
-const barMap = {
-  primary: "bg-primary",
-  secondary: "bg-secondary",
-  tertiary: "bg-tertiary",
-};
+const colorText = { primary: "text-primary", secondary: "text-secondary", tertiary: "text-tertiary" };
 
 export default function Skills() {
+  const firstRow = skills;
+  const secondRow = [...skills].reverse();
+
   return (
-    <section id="skills" className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+    <section id="skills" className="overflow-hidden px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
       <div className="mx-auto max-w-content">
-        <div className="mb-10 grid gap-5 lg:grid-cols-[1fr_420px] lg:items-end">
-          <div>
-            <span className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-primary">// Kapabilitas Teknis</span>
-            <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">Skills & Technology Matrix</h2>
+        <Reveal>
+          <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl">
+              <span className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-primary">// Skills</span>
+              <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl">Tools I work with.</h2>
+              <p className="mt-3 text-sm leading-7 text-muted sm:text-base">HTML, CSS, JavaScript, React, Next.js, Laravel, database, design tools, and the workflow behind them.</p>
+            </div>
+            <Link href="/skills" className="inline-flex h-10 w-fit shrink-0 items-center rounded-xl border border-border-strong bg-[var(--surface)] px-4 text-sm font-semibold text-foreground transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-[var(--surface-high)]">View all skills →</Link>
           </div>
-          <p className="text-sm leading-7 text-muted sm:text-base">Harmonizing visual design rigor with scalable engineering principles across the modern digital product stack.</p>
+        </Reveal>
+
+        <div className="space-y-3">
+          <SkillRail skills={firstRow} direction="left" />
+          <SkillRail skills={secondRow} direction="right" />
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
-          {skillGroups.map((group) => (
-            <article key={group.title} className="flex min-h-[390px] flex-col justify-between rounded-panel border border-border bg-[var(--surface)]/90 p-6 shadow-[var(--shadow-soft)] transition hover:-translate-y-1 hover:border-border-strong hover:shadow-[var(--shadow-glow)] sm:p-7">
-              <div>
-                <div className={`mb-5 grid h-11 w-11 place-items-center rounded-xl text-lg ${colorMap[group.color]}`}>{group.icon}</div>
-                <h3 className="font-display text-xl font-bold text-foreground">{group.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-muted">{group.description}</p>
-
-                <div className="mt-7 space-y-4">
-                  {group.skills.map(([name, value]) => (
-                    <div key={name}>
-                      <div className="mb-2 flex items-center justify-between gap-4 text-xs">
-                        <span className="font-medium text-foreground-soft">{name}</span>
-                        <strong className="font-mono text-muted">{value}%</strong>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-highest)]">
-                        <div className={`h-full rounded-full ${barMap[group.color]} transition-all duration-700`} style={{ width: `${value}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-7 flex flex-wrap gap-2 border-t border-border pt-5">
-                {group.tags.map((tag) => <span key={tag} className="rounded-lg border border-border bg-[var(--surface-high)] px-2.5 py-1.5 font-mono text-[10px] text-muted">{tag}</span>)}
-              </div>
-            </article>
-          ))}
-        </div>
+        <Reveal delay={80}>
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">Hover to pause • Click to explore the full stack</p>
+            <span className="text-xs text-muted">{skills.length} core technologies</span>
+          </div>
+        </Reveal>
       </div>
     </section>
+  );
+}
+
+function SkillRail({ skills, direction }) {
+  const items = [...skills, ...skills];
+  return (
+    <div className={`skill-rail ${direction === "right" ? "skill-rail-reverse" : ""}`} aria-label="Scrolling skills">
+      <div className="skill-rail-track">
+        {items.map((skill, index) => (
+          <div key={`${skill.name}-${direction}-${index}`} className="skill-rail-item">
+            <SkillLogo skill={skill} />
+            <div className="min-w-0">
+              <strong className="block whitespace-nowrap text-xs text-foreground">{skill.name}</strong>
+              <span className={`font-mono text-[9px] uppercase tracking-wider ${colorText[skill.color]}`}>{skill.category}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
