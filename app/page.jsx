@@ -10,17 +10,13 @@ export default function HomePage() {
   return (
     <>
       <Navbar />
-
-      <main>
-        <div className="page-shell">
-          <Hero />
-          <Projects />
-          <Skills />
-          <Experience />
-          <Contact />
-        </div>
+      <main className="relative overflow-hidden">
+        <Hero />
+        <Projects />
+        <Skills />
+        <Experience />
+        <Contact />
       </main>
-
       <Footer />
     </>
   );

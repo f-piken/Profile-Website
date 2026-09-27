@@ -3,13 +3,12 @@ import InteractiveBackground from "@/components/InteractiveBackground";
 
 export const metadata = {
   title: "Creative Engineer | Portfolio",
-  description:
-    "Portfolio Creative Engineer — product design, frontend engineering, motion, 3D, and modern digital experiences.",
+  description: "Portfolio Creative Engineer — product design, frontend engineering, motion, 3D, and modern digital experiences.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id">
+    <html lang="id" data-theme="dark" suppressHydrationWarning>
       <body>
         <InteractiveBackground />
         {children}

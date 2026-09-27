@@ -14,155 +14,133 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const [theme, setTheme] = useState("dark");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 30);
-    };
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    setTheme(savedTheme);
+    document.documentElement.dataset.theme = savedTheme;
 
-    window.addEventListener("scroll", handleScroll);
-
-    // ==============================
-    // LOAD THEME
-    // ==============================
-
-    const savedTheme = localStorage.getItem("theme");
-
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.dataset.theme = savedTheme;
-    } else {
-      document.documentElement.dataset.theme = "dark";
-    }
-
-    // ==============================
-    // SECTION OBSERVER
-    // ==============================
+    const handleScroll = () => setScrolled(window.scrollY > 30);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     const sections = navItems
-      .map((item) =>
-        document.getElementById(item.id)
-      )
+      .map((item) => document.getElementById(item.id))
       .filter(Boolean);
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const visibleSections = entries
-          .filter(
-            (entry) => entry.isIntersecting
-          )
-          .sort(
-            (a, b) =>
-              b.intersectionRatio -
-              a.intersectionRatio
-          );
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
 
-        if (visibleSections.length > 0) {
-          setActiveSection(
-            visibleSections[0].target.id
-          );
-        }
+        if (visible[0]) setActiveSection(visible[0].target.id);
       },
-      {
-        threshold: [0.2, 0.4, 0.6],
-        rootMargin:
-          "-20% 0px -50% 0px",
-      }
+      { threshold: [0.2, 0.4, 0.6], rootMargin: "-20% 0px -50% 0px" },
     );
 
-    sections.forEach((section) => {
-      if (section) {
-        observer.observe(section);
-      }
-    });
+    sections.forEach((section) => observer.observe(section));
 
     return () => {
-      window.removeEventListener(
-        "scroll",
-        handleScroll
-      );
-
+      window.removeEventListener("scroll", handleScroll);
       observer.disconnect();
     };
   }, []);
 
-  // ==============================
-  // TOGGLE THEME
-  // ==============================
-
   const toggleTheme = () => {
-    const newTheme =
-      theme === "dark"
-        ? "light"
-        : "dark";
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("theme", next);
+  };
 
-    setTheme(newTheme);
+  const goTo = (id) => {
+    setMobileOpen(false);
 
-    document.documentElement.dataset.theme =
-      newTheme;
-
-    localStorage.setItem(
-      "theme",
-      newTheme
-    );
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+    });
   };
 
   return (
     <nav
-      className={`navbar ${
-        scrolled
-          ? "navbar-scrolled"
-          : ""
+      className={`fixed left-1/2 top-3 z-50 w-[calc(100%-24px)] max-w-content -translate-x-1/2 transition-all duration-300 sm:top-5 sm:w-[calc(100%-32px)] ${
+        scrolled ? "top-2 sm:top-3" : ""
       }`}
     >
-      <div className="navbar-inner">
+      <div className="rounded-4xl border border-border bg-[color:var(--surface)]/85 px-8 shadow-[var(--shadow-soft)] backdrop-blur-xl transition-colors duration-300">
+        <div className="flex min-h-14 items-center gap-2 sm:min-h-16 sm:gap-3">
+          <button
+            onClick={() => goTo("home")}
+            className="group grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary font-display text-sm font-extrabold text-white shadow-[0_0_28px_var(--glow-color)] transition hover:scale-105 sm:h-11 sm:w-11"
+            aria-label="Go to home"
+          >
+            F
+            <span className="absolute ml-4 mt-4 h-1.5 w-1.5 rounded-full bg-tertiary" />
+          </button>
 
-        {/* LOGO */}
+          <div className="hidden flex-1 items-center justify-center gap-1 md:flex">
+            {navItems.map((item) => {
+              const active = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => goTo(item.id)}
+                  className={`rounded-xl px-3.5 py-2 text-sm font-medium transition ${
+                    active
+                      ? "bg-primary-soft text-primary"
+                      : "text-muted hover:bg-[var(--surface-high)] hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
 
-        <a
-          href="#home"
-          className="navbar-logo"
-        >
-          <span>F</span>
-        </a>
-
-        {/* NAVIGATION */}
-
-        <div className="navbar-links">
-          {navItems.map((item) => (
-            <a
-              key={item.id}
-              href={`#${item.id}`}
-              className={
-                activeSection === item.id
-                  ? "active"
-                  : ""
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+              title={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
               }
+              className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-[var(--surface-high)] text-base text-foreground transition hover:border-border-strong hover:bg-[var(--surface-highest)]"
             >
-              {item.label}
-            </a>
-          ))}
+              {theme === "dark" ? "☀" : "☾"}
+            </button>
+
+            <button
+              onClick={() => setMobileOpen((open) => !open)}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-[var(--surface-high)] text-lg text-foreground transition hover:border-border-strong md:hidden"
+              aria-label="Toggle navigation"
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? "×" : "☰"}
+            </button>
+          </div>
         </div>
 
-        {/* THEME BUTTON */}
-
-        <button
-          className="theme-toggle"
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          title={
-            theme === "dark"
-              ? "Switch to light mode"
-              : "Switch to dark mode"
-          }
-        >
-          <span className="theme-icon">
-            {theme === "dark"
-              ? "☀"
-              : "☾"}
-          </span>
-        </button>
-
+        {mobileOpen && (
+          <div className="grid gap-1 border-t border-border pt-2 md:hidden">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => goTo(item.id)}
+                className={`rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
+                  activeSection === item.id
+                    ? "bg-primary-soft text-primary"
+                    : "text-muted hover:bg-[var(--surface-high)] hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </nav>
   );
