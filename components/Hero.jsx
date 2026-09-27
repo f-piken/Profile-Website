@@ -574,7 +574,7 @@ export default function Hero() {
                     sm:text-sm
                   "
                 >
-                  Programmer & Developer
+                  Programmer & Dev
                 </span>
               </div>
 
@@ -593,7 +593,7 @@ export default function Hero() {
                   sm:text-xs
                 "
               >
-                Bangkalan - East Java
+                Bkl - East Java
               </small>
             </div>
 
