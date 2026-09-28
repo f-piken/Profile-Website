@@ -7,26 +7,86 @@ import Reveal from "./Reveal";
 function ProjectStack({ side = "left", items, onSelect }) {
   const [index, setIndex] = useState(0);
   const [leaving, setLeaving] = useState(false);
-  const timerRef = useRef(null);
+  const cardRef = useRef(null);
+  const animationRef = useRef(null);
 
   const current = items[index];
-  // The next project is always physically behind the current photo.
-  // There is no shuffle and no automatic rotation: the user reveals it by clicking.
   const next = items[(index + 1) % items.length];
   const nextNext = items[(index + 2) % items.length];
+  // Left stack throws left; right stack throws right.
+  const direction = side === "left" ? -1 : 1;
 
-  const revealNext = useCallback(() => {
-    if (leaving || items.length < 2) return;
+  const revealNext = useCallback(async () => {
+    if (leaving || items.length < 2 || !cardRef.current) return;
+
+    const card = cardRef.current;
+    const width = card.offsetWidth;
+    const height = card.offsetHeight;
+    const distance = Math.max(width * 1.2, 420);
+    const rotation = direction * 135;
 
     setLeaving(true);
-    window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => {
-      setIndex((value) => (value + 1) % items.length);
-      setLeaving(false);
-    }, 560);
-  }, [items.length, leaving]);
+    animationRef.current?.cancel();
 
-  useEffect(() => () => window.clearTimeout(timerRef.current), []);
+    const animation = card.animate(
+      [
+        {
+          transform: "translate3d(0, 0, 0) rotate(0deg) scale(1)",
+          opacity: 1,
+          offset: 0,
+        },
+        {
+          transform: `translate3d(${direction * distance * 0.25}px, ${-height * 0.72}px, 0) rotate(${rotation * 0.22}deg) scale(.99)`,
+          opacity: 1,
+          offset: 0.25,
+        },
+        {
+          transform: `translate3d(${direction * distance * 0.58}px, ${-height * 1.05}px, 0) rotate(${rotation * 0.5}deg) scale(.97)`,
+          opacity: 1,
+          offset: 0.52,
+        },
+        {
+          transform: `translate3d(${direction * distance * 0.9}px, ${-height * 0.48}px, 0) rotate(${rotation * 0.78}deg) scale(.94)`,
+          opacity: 0.82,
+          offset: 0.78,
+        },
+        {
+          transform: `translate3d(${direction * distance}px, ${height * 0.18}px, 0) rotate(${rotation}deg) scale(.9)`,
+          opacity: 0,
+          offset: 1,
+        },
+      ],
+      {
+        duration: 920,
+        easing: "cubic-bezier(.2,.78,.24,1)",
+        fill: "forwards",
+      },
+    );
+
+    animationRef.current = animation;
+
+    try {
+      await animation.finished;
+    } catch {
+      return;
+    }
+
+    if (animationRef.current !== animation) return;
+    animation.cancel();
+
+    card.style.opacity = "0";
+    card.style.transform = "none";
+    setIndex((value) => (value + 1) % items.length);
+
+    requestAnimationFrame(() => {
+      if (!cardRef.current) return;
+      cardRef.current.style.opacity = "1";
+      cardRef.current.style.transform = "none";
+      setLeaving(false);
+    });
+  }, [direction, items.length, leaving]);
+
+  useEffect(() => () => animationRef.current?.cancel(), []);
 
   return (
     <div className={`project-stack-wrap ${side === "right" ? "project-stack-right" : "project-stack-left"}`}>
@@ -37,35 +97,15 @@ function ProjectStack({ side = "left", items, onSelect }) {
           onClick={revealNext}
           aria-label={`Tampilkan project berikutnya setelah ${current.title}`}
         >
-          {/* These are real images, already waiting behind the active sheet. */}
           <span className="project-stack-back project-stack-back-one" aria-hidden="true">
-            <img
-              src={nextNext.image}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="project-stack-image project-stack-back-image"
-            />
+            <img src={nextNext.image} alt="" loading="lazy" decoding="async" className="project-stack-image project-stack-back-image" />
           </span>
           <span className="project-stack-back project-stack-back-two" aria-hidden="true">
-            <img
-              src={next.image}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="project-stack-image project-stack-back-image"
-            />
+            <img src={next.image} alt="" loading="lazy" decoding="async" className="project-stack-image project-stack-back-image" />
           </span>
 
-          {/* Only the top sheet leaves. Nothing animates into the stack. */}
-          <span className="project-stack-card">
-            <img
-              src={current.image}
-              alt={current.alt}
-              loading="lazy"
-              decoding="async"
-              className="project-stack-image"
-            />
+          <span ref={cardRef} className="project-stack-card">
+            <img src={current.image} alt={current.alt} loading="lazy" decoding="async" className="project-stack-image" />
             <span className="project-stack-shade" />
             <span className="project-stack-hint">
               <span className="grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-black/25 text-sm backdrop-blur-sm">↗</span>
@@ -79,34 +119,18 @@ function ProjectStack({ side = "left", items, onSelect }) {
       </div>
 
       <div key={`${side}-${current.id}`} className="project-stack-caption">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary">
-          {current.categoryLabel} · {current.year}
-        </span>
-        <h3 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-          {current.title}
-        </h3>
-        <p className="mt-3 max-w-lg text-sm leading-7 text-muted sm:text-[15px]">
-          {current.description}
-        </p>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary">{current.categoryLabel} · {current.year}</span>
+        <h3 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{current.title}</h3>
+        <p className="mt-3 max-w-lg text-sm leading-7 text-muted sm:text-[15px]">{current.description}</p>
         <div className="mt-5 flex flex-wrap gap-2">
-          {current.technologies.map((tech) => (
-            <span key={tech} className="rounded-full border border-border bg-[var(--surface)] px-2.5 py-1 font-mono text-[10px] text-muted">
-              {tech}
-            </span>
-          ))}
+          {current.technologies.map((tech) => <span key={tech} className="rounded-full border border-border bg-[var(--surface)] px-2.5 py-1 font-mono text-[10px] text-muted">{tech}</span>)}
         </div>
-        <button
-          type="button"
-          onClick={() => onSelect(current)}
-          className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-foreground transition-[gap,color] duration-200 hover:gap-3 hover:text-primary"
-        >
+        <button type="button" onClick={() => onSelect(current)} className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-foreground transition-[gap,color] duration-200 hover:gap-3 hover:text-primary">
           View case study <span aria-hidden="true">→</span>
         </button>
       </div>
 
-      <p className="project-stack-next-hint" aria-hidden="true">
-        Click photo untuk mengambil lembar berikutnya
-      </p>
+      <p className="project-stack-next-hint" aria-hidden="true">Click photo untuk melempar lembar secara diagonal</p>
     </div>
   );
 }
@@ -124,7 +148,7 @@ export default function Projects() {
               Projects that turn ideas into systems.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-muted sm:text-base">
-              Dua tumpukan project berjalan secara independen. Project berikutnya sudah berada di belakang foto aktif — klik foto untuk mengambil lembar teratas dan menampilkan project berikutnya.
+              Dua tumpukan project berjalan secara independen. Project berikutnya sudah berada di belakang foto aktif — klik foto untuk menggeser lembar aktif secara diagonal dan menampilkan project berikutnya.
             </p>
           </div>
         </Reveal>

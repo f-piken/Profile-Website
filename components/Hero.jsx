@@ -37,8 +37,12 @@ export default function Hero() {
   }, [typedWord, isDeleting, wordIndex]);
 
   useEffect(() => {
-    const timer = requestAnimationFrame(() => setLoaded(true));
-    return () => cancelAnimationFrame(timer);
+    const startHero = () => setLoaded(true);
+
+    // The hero entrance waits for the loader to finish so the animation
+    // is visible to the user instead of playing underneath the loader.
+    window.addEventListener("portfolio:loaded", startHero);
+    return () => window.removeEventListener("portfolio:loaded", startHero);
   }, []);
 
   useEffect(() => {
@@ -47,10 +51,14 @@ export default function Hero() {
 
     const update = () => {
       const { x, y } = targetRef.current;
-      node.style.setProperty("--rx", `${-y * 4}deg`);
-      node.style.setProperty("--ry", `${x * 4}deg`);
-      node.style.setProperty("--gx", `${x * 18}px`);
-      node.style.setProperty("--gy", `${y * 18}px`);
+      // Stronger 3D tilt while keeping the movement on the compositor.
+      node.style.setProperty("--rx", `${-y * 12}deg`);
+      node.style.setProperty("--ry", `${x * 12}deg`);
+      node.style.setProperty("--gx", `${x * 10}px`);
+      node.style.setProperty("--gy", `${y * 10}px`);
+      node.style.setProperty("--img-x", `${x * -10}px`);
+      node.style.setProperty("--img-y", `${y * -10}px`);
+      node.style.setProperty("--img-scale", `${1.04 + Math.abs(x) * 0.035 + Math.abs(y) * 0.035}`);
       node.style.setProperty("--spot-x", `${50 + x * 45}%`);
       node.style.setProperty("--spot-y", `${50 + y * 45}%`);
       frameRef.current = 0;
@@ -85,7 +93,7 @@ export default function Hero() {
       <div className="hero-glow pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 opacity-70 blur-[65px] sm:h-[440px] sm:w-[440px]" />
 
       <div className="relative z-10 mx-auto grid w-full max-w-content items-center gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 xl:gap-20">
-        <div className={`max-w-3xl transition-[opacity,transform] duration-700 ${loaded ? "translate-y-0 opacity-100" : "translate-y-5 opacity-0"}`}>
+        <div className={`hero-copy max-w-3xl ${loaded ? "is-entered" : ""}`}>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-[var(--surface)]/80 px-3.5 py-2 font-mono text-[11px] font-medium text-muted shadow-[var(--shadow-soft)] backdrop-blur-md sm:mb-7 sm:text-xs">
             <span className="relative grid h-2 w-2 place-items-center">
               <span className="absolute h-3 w-3 animate-[pulse-ring_2s_ease-in-out_infinite] rounded-full bg-primary/30" />
@@ -123,10 +131,10 @@ export default function Hero() {
           </div>
         </div>
 
-        <div ref={imageRef} className={`relative mx-auto w-full max-w-[380px] transition-[opacity,transform] duration-1000 lg:max-w-[340px] xl:max-w-[360px] ${loaded ? "translate-x-0 opacity-100" : "translate-x-5 opacity-0"}`}>
+        <div ref={imageRef} className={`hero-visual relative mx-auto w-full max-w-[380px] lg:max-w-[340px] xl:max-w-[360px] ${loaded ? "is-entered" : ""}`}>
           <div className="image-glow pointer-events-none absolute inset-10 rounded-[2rem] bg-primary/20 blur-[42px]" />
 
-          <div className="hero-image group relative mx-auto aspect-[4/5] w-full max-w-[320px] overflow-hidden rounded-[2rem] border border-border-strong bg-[var(--surface)] shadow-[0_24px_65px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out will-change-transform" style={{ transform: "perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, 0, 0)" }}>
+          <div className="hero-image group relative mx-auto aspect-[4/5] w-full max-w-[320px] overflow-hidden rounded-[2rem] border border-border-strong bg-[var(--surface)] shadow-[0_24px_65px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out will-change-transform" style={{ transform: "perspective(1200px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(var(--gx, 0px), var(--gy, 0px), 18px)" }}>
             <Image src="/images/profile.jpeg" alt="Fiky Prayoga" fill priority sizes="(max-width: 640px) 80vw, (max-width: 1024px) 340px, 360px" className="object-cover transition-transform duration-500 hover:scale-[1.025]" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 text-white sm:p-6">

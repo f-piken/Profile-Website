@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
 const experiences = [
   {
     role: "Senior Product Designer",
@@ -29,8 +33,55 @@ const dotMap = { primary: "bg-primary", secondary: "bg-secondary", tertiary: "bg
 const textMap = { primary: "text-primary", secondary: "text-secondary", tertiary: "text-tertiary" };
 
 export default function Experience() {
+  const sectionRef = useRef(null);
+  const itemRefs = useRef([]);
+  const [activeCount, setActiveCount] = useState(0);
+  const frameRef = useRef(0);
+  const lastCountRef = useRef(0);
+
+  useEffect(() => {
+    const updateProgress = () => {
+      if (frameRef.current) return;
+
+      frameRef.current = requestAnimationFrame(() => {
+        frameRef.current = 0;
+        const section = sectionRef.current;
+        if (!section) return;
+
+        const rect = section.getBoundingClientRect();
+        const viewport = window.innerHeight;
+        const start = viewport * 0.82;
+        const end = viewport * 0.18;
+        const raw = (start - rect.top) / Math.max(1, rect.height - (start - end));
+        const nextProgress = Math.max(0, Math.min(1, raw));
+
+        // Write the progress directly to CSS so scrolling does not re-render the whole section.
+        section.style.setProperty("--experience-progress", String(nextProgress));
+
+        // Only React-render when the next card actually crosses its reveal threshold.
+        const count = Math.min(
+          experiences.length,
+          Math.floor(nextProgress * experiences.length + 0.18),
+        );
+        if (count !== lastCountRef.current) {
+          lastCountRef.current = count;
+          setActiveCount(count);
+        }
+      });
+    };
+
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
+    return () => {
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, []);
+
   return (
-    <section id="experience" className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+    <section id="experience" ref={sectionRef} className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
       <div className="mx-auto max-w-content">
         <div className="mb-12 max-w-2xl">
           <span className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-primary">// Rekam Jejak</span>
@@ -38,25 +89,35 @@ export default function Experience() {
           <p className="mt-4 text-sm leading-7 text-muted sm:text-base">Over half a decade directing UI engineering, elevating design teams, and architecting resilient consumer platforms.</p>
         </div>
 
-        <div className="relative ml-2 border-l border-border pl-7 sm:ml-4 sm:pl-10">
-          {experiences.map((item) => (
-            <article key={item.role} className="relative mb-8 last:mb-0">
-              <span className={`absolute -left-[38px] top-8 h-4 w-4 rounded-full border-4 border-[var(--background)] ${dotMap[item.color]} shadow-[0_0_18px_var(--glow-color)] sm:-left-[49px]`} />
-              <div className="rounded-panel border border-border bg-[var(--surface)]/90 p-5 shadow-[var(--shadow-soft)] transition hover:border-border-strong hover:shadow-[var(--shadow-glow)] sm:p-7">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="font-display text-xl font-bold text-foreground">{item.role}</h3>
-                    <span className={`mt-1 block text-sm font-semibold ${textMap[item.color]}`}>{item.company}</span>
+        <div className="experience-timeline relative">
+          <div className="experience-progress-wrap" aria-hidden="true">
+            <div className="experience-progress-track"><span /></div>
+          </div>
+          {experiences.map((item, itemIndex) => {
+            const isActive = itemIndex < activeCount;
+            return (
+              <article
+                key={item.role}
+                ref={(node) => { itemRefs.current[itemIndex] = node; }}
+                className={`experience-item relative mb-8 last:mb-0 ${isActive ? "is-visible" : ""}`}
+              >
+                <span className={`experience-dot absolute top-8 h-4 w-4 rounded-full border-4 border-[var(--background)] ${dotMap[item.color]} shadow-[0_0_18px_var(--glow-color)]`} />
+                <div className="rounded-panel border border-border bg-[var(--surface)]/90 p-5 shadow-[var(--shadow-soft)] transition hover:border-border-strong hover:shadow-[var(--shadow-glow)] sm:p-7">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="font-display text-xl font-bold text-foreground">{item.role}</h3>
+                      <span className={`mt-1 block text-sm font-semibold ${textMap[item.color]}`}>{item.company}</span>
+                    </div>
+                    <span className="w-fit rounded-full border border-border bg-[var(--surface-high)] px-3 py-1.5 font-mono text-[10px] text-muted">{item.period}</span>
                   </div>
-                  <span className="w-fit rounded-full border border-border bg-[var(--surface-high)] px-3 py-1.5 font-mono text-[10px] text-muted">{item.period}</span>
+                  <p className="mt-5 text-sm leading-7 text-muted">{item.description}</p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {item.tags.map((tag) => <span key={tag} className="rounded-lg border border-border bg-[var(--surface-high)] px-2.5 py-1.5 font-mono text-[10px] text-muted">{tag}</span>)}
+                  </div>
                 </div>
-                <p className="mt-5 text-sm leading-7 text-muted">{item.description}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {item.tags.map((tag) => <span key={tag} className="rounded-lg border border-border bg-[var(--surface-high)] px-2.5 py-1.5 font-mono text-[10px] text-muted">{tag}</span>)}
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>

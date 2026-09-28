@@ -1,5 +1,6 @@
 import "./globals.css";
 import InteractiveBackground from "@/components/InteractiveBackground";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export const metadata = {
   title: "Creative Engineer | Portfolio",
@@ -10,6 +11,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="id" data-theme="dark" suppressHydrationWarning>
       <body>
+        <LoadingScreen />
         <InteractiveBackground />
         {children}
       </body>

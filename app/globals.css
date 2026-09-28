@@ -180,7 +180,7 @@
 
 .image-glow {
   transform: translate3d(var(--gx, 0px), var(--gy, 0px), 0) scale(1);
-  transition: transform 220ms ease-out;
+  transition: transform 260ms cubic-bezier(.22,.8,.25,1);
   will-change: transform;
 }
 
@@ -368,7 +368,8 @@
   .theme-wipe { display: none; }
 }
 
-/* Independent project photo stacks: deterministic stacks, no auto-shuffle. */
+/* Independent project photo stacks. The top sheet is thrown away with a
+   real-time parabolic trajectory; the sheets underneath never animate. */
 .project-showcase {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -376,22 +377,14 @@
   align-items: start;
 }
 
-.project-stack-wrap {
-  position: relative;
-  min-width: 0;
-}
-
-.project-stack-right {
-  padding-top: clamp(2rem, 7vw, 6.5rem);
-}
-
+.project-stack-wrap { position: relative; min-width: 0; }
+.project-stack-right { padding-top: clamp(2rem, 7vw, 6.5rem); }
 .project-stack-area {
   position: relative;
   width: min(100%, 470px);
   aspect-ratio: 1.28 / 1;
   margin-inline: auto;
 }
-
 .project-stack {
   position: relative;
   display: block;
@@ -402,8 +395,8 @@
   padding: 0;
   isolation: isolate;
   cursor: pointer;
+  overflow: visible;
 }
-
 .project-stack-card,
 .project-stack-back {
   position: absolute;
@@ -411,82 +404,47 @@
   overflow: hidden;
   border-radius: 1.35rem;
 }
-
 .project-stack-back {
   border: 1px solid var(--border-strong);
   background: var(--surface-high);
   box-shadow: var(--shadow-soft);
   pointer-events: none;
 }
-
-.project-stack-back-image {
-  opacity: .96;
-  filter: saturate(.9);
-}
-
-/* The next sheet is immediately behind the active sheet. */
-.project-stack-back-two {
-  z-index: 1;
-  transform: rotate(4.5deg) translate(13px, 13px);
-  opacity: .76;
-}
-
-/* A second waiting sheet sits below the next sheet. */
-.project-stack-back-one {
-  z-index: 0;
-  transform: rotate(-4deg) translate(-12px, 9px);
-  opacity: .48;
-}
-
+.project-stack-back-image { opacity: .96; filter: saturate(.9); }
+.project-stack-back-two { z-index: 1; transform: none; opacity: .96; }
+.project-stack-back-one { z-index: 0; transform: rotate(-4deg) translate(-12px, 9px); opacity: .48; }
 .project-stack-card {
   z-index: 2;
   border: 1px solid var(--border-strong);
   background: var(--surface-high);
   box-shadow: 0 24px 70px rgba(0,0,0,.18);
-  transform: rotate(-1.1deg);
-  transition: transform 280ms ease, box-shadow 280ms ease, opacity 560ms cubic-bezier(.7,0,.2,1);
+  transform: none;
+  transition: box-shadow 280ms ease;
   will-change: transform, opacity;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
-
-.project-stack-right .project-stack-card {
-  transform: rotate(1.2deg);
-}
-
-.project-stack:hover .project-stack-card {
-  transform: rotate(0deg) translateY(-5px) scale(1.01);
+.project-stack:hover .project-stack-card:not(.is-throwing) {
   box-shadow: 0 28px 80px rgba(0,0,0,.22);
 }
-
-/* Only the top sheet moves out. The sheets underneath never animate in. */
 .project-stack.is-leaving .project-stack-card {
-  opacity: 0;
-  transform: translate3d(0, -115%, 0) rotate(-6deg) scale(.985);
-  transition: transform 560ms cubic-bezier(.72,0,.24,1), opacity 420ms ease;
+  z-index: 4;
+  transition: none !important;
 }
-
-.project-stack-right .project-stack.is-leaving .project-stack-card {
-  transform: translate3d(0, -115%, 0) rotate(6deg) scale(.985);
-}
-
 .project-stack-image {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 600ms cubic-bezier(.22,.8,.25,1);
+  transition: none;
 }
-
-.project-stack:hover .project-stack-card .project-stack-image {
-  transform: scale(1.035);
-}
-
 .project-stack-shade {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,.58));
   pointer-events: none;
 }
-
 .project-stack-hint {
   position: absolute;
   left: 1rem;
@@ -502,7 +460,6 @@
   text-transform: uppercase;
   pointer-events: none;
 }
-
 .project-stack-index {
   position: absolute;
   right: 1rem;
@@ -517,24 +474,13 @@
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
-
 .project-stack-caption {
   margin-top: 2.1rem;
   animation: project-copy-in 520ms cubic-bezier(.22,.8,.25,1) both;
 }
-
-.project-stack-right .project-stack-caption {
-  text-align: right;
-}
-
-.project-stack-right .project-stack-caption p {
-  margin-left: auto;
-}
-
-.project-stack-right .project-stack-caption .flex {
-  justify-content: flex-end;
-}
-
+.project-stack-right .project-stack-caption { text-align: right; }
+.project-stack-right .project-stack-caption p { margin-left: auto; }
+.project-stack-right .project-stack-caption .flex { justify-content: flex-end; }
 .project-stack-next-hint {
   margin-top: .8rem;
   font-family: var(--font-mono);
@@ -544,78 +490,304 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-
-.project-stack-right .project-stack-next-hint {
-  text-align: right;
-}
-
+.project-stack-right .project-stack-next-hint { text-align: right; }
 @keyframes project-copy-in {
   from { opacity: 0; transform: translate3d(0, 12px, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-@media (max-width: 900px) {
-  .project-showcase {
-    grid-template-columns: 1fr;
-    gap: 4.5rem;
-  }
-
-  .project-stack-right {
-    padding-top: 0;
-  }
-
-  .project-stack-right .project-stack-caption,
-  .project-stack-right .project-stack-caption p {
-    text-align: left;
-    margin-left: 0;
-  }
-
-  .project-stack-right .project-stack-caption .flex {
-    justify-content: flex-start;
-  }
-
-  .project-stack-area {
-    width: min(100%, 600px);
-  }
-
-  .project-stack-right .project-stack-next-hint {
-    text-align: left;
-  }
+/* Experience & Milestones: desktop alternates left/right around a center progress bar. */
+.experience-timeline {
+  position: relative;
+  padding: 0;
+}
+.experience-progress-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.experience-progress-track {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  overflow: hidden;
+  background: var(--border);
+  transform: translateX(-50%);
+  border-radius: 999px;
+}
+.experience-progress-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--primary), var(--secondary), var(--tertiary));
+  border-radius: inherit;
+  transform-origin: top center;
+  transform: scaleY(var(--experience-progress, 0));
+  transition: transform 180ms linear;
+  box-shadow: 0 0 16px var(--glow-color);
+  will-change: transform;
+}
+.experience-item {
+  position: relative;
+  width: calc(50% - 34px);
+  opacity: 0;
+  transform: translate3d(0, 36px, 0) scale(.98);
+  transition: opacity 620ms cubic-bezier(.22,.8,.25,1), transform 700ms cubic-bezier(.22,.8,.25,1);
+  z-index: 1;
+}
+.experience-item.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
+.experience-item > div {
+  transition: border-color 320ms ease, box-shadow 420ms ease, transform 420ms cubic-bezier(.22,.8,.25,1);
+}
+.experience-item:nth-of-type(odd) { margin-right: auto; padding-right: 0; }
+.experience-item:nth-of-type(even) { margin-left: auto; padding-left: 0; }
+.experience-dot {
+  z-index: 2;
+}
+.experience-item:nth-of-type(odd) .experience-dot { right: -42px; }
+.experience-item:nth-of-type(even) .experience-dot { left: -42px; }
+
+@media (max-width: 900px) {
+  .project-showcase { grid-template-columns: 1fr; gap: 4.5rem; }
+  .project-stack-right { padding-top: 0; }
+  .project-stack-right .project-stack-caption,
+  .project-stack-right .project-stack-caption p { text-align: left; margin-left: 0; }
+  .project-stack-right .project-stack-caption .flex { justify-content: flex-start; }
+  .project-stack-area { width: min(100%, 600px); }
+  .project-stack-right .project-stack-next-hint { text-align: left; }
+}
+
+/* Mobile experience is intentionally one-directional instead of alternating. */
 @media (max-width: 640px) {
-  .project-showcase {
-    gap: 3.75rem;
-  }
+  .project-showcase { gap: 3.75rem; }
+  .project-stack-area { aspect-ratio: 1.18 / 1; }
+  .project-stack-card, .project-stack-back { border-radius: 1rem; }
+  .project-stack-back-one { transform: rotate(-3.5deg) translate(-8px, 6px); }
+  .project-stack-hint { left: .75rem; bottom: .75rem; }
 
-  .project-stack-area {
-    aspect-ratio: 1.18 / 1;
+  .experience-timeline { padding-left: 2rem; }
+  .experience-progress-track {
+    left: .65rem;
+    transform: translateX(-50%);
   }
-
-  .project-stack-card,
-  .project-stack-back {
-    border-radius: 1rem;
+  .experience-item,
+  .experience-item:nth-of-type(odd),
+  .experience-item:nth-of-type(even) {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
   }
-
-  .project-stack-back-two {
-    transform: rotate(4deg) translate(8px, 9px);
+  .experience-item:nth-of-type(odd) .experience-dot,
+  .experience-item:nth-of-type(even) .experience-dot {
+    left: calc(-2rem + .65rem - 8px);
+    right: auto;
   }
-
-  .project-stack-back-one {
-    transform: rotate(-3.5deg) translate(-8px, 6px);
-  }
-
-  .project-stack-hint {
-    left: .75rem;
-    bottom: .75rem;
-  }
+  .experience-item > div { padding: 1rem; }
+  .experience-item h3 { font-size: .95rem; line-height: 1.3; }
+  .experience-item p { margin-top: .8rem; font-size: .72rem; line-height: 1.6; }
+  .experience-item .flex-wrap { margin-top: .8rem; }
+  .experience-item .flex-col { gap: .5rem; }
+  .experience-item .font-mono { font-size: .52rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .project-stack-card,
   .project-stack-image,
-  .project-stack-caption {
+  .project-stack-caption,
+  .experience-item,
+  .experience-progress-track span {
     transition: none !important;
     animation: none !important;
+  }
+  .experience-item { opacity: 1; transform: none; }
+}
+
+/* Initial portfolio loader — inspired by the minimal editorial loading screen. */
+.site-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: #fbfafc;
+  color: #20222a;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 520ms cubic-bezier(.76,0,.24,1), visibility 520ms;
+}
+
+.site-loader.is-exiting {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.site-loader-mark {
+  position: relative;
+  display: flex;
+  width: min(72vw, 260px);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.site-loader-name {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 2.75rem);
+  font-weight: 800;
+  line-height: .9;
+  letter-spacing: -.075em;
+  animation: loader-name-in 700ms cubic-bezier(.22,.8,.25,1) both;
+}
+
+.site-loader-subtitle {
+  margin-top: .85rem;
+  font-family: var(--font-mono);
+  font-size: .48rem;
+  font-weight: 500;
+  letter-spacing: .36em;
+  color: #8a8d98;
+  animation: loader-subtitle-in 700ms 120ms cubic-bezier(.22,.8,.25,1) both;
+}
+
+.site-loader-line {
+  position: absolute;
+  top: 5.4rem;
+  left: 50%;
+  width: 165px;
+  height: 1px;
+  background: #343640;
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: left center;
+  animation: loader-line-in 850ms 250ms cubic-bezier(.22,.8,.25,1) forwards;
+}
+
+.site-loader-line-slanted {
+  top: 3.9rem;
+  width: 112px;
+  background: #bfc1c8;
+  transform: translateX(-50%) rotate(-42deg) scaleX(0);
+  transform-origin: center;
+  animation: loader-slash-in 900ms 380ms cubic-bezier(.22,.8,.25,1) forwards;
+}
+
+@keyframes loader-name-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes loader-subtitle-in {
+  from { opacity: 0; letter-spacing: .7em; transform: translateY(5px); }
+  to { opacity: 1; letter-spacing: .36em; transform: translateY(0); }
+}
+
+@keyframes loader-line-in {
+  from { opacity: 0; transform: translateX(-50%) scaleX(0); }
+  to { opacity: 1; transform: translateX(-50%) scaleX(1); }
+}
+
+@keyframes loader-slash-in {
+  from { opacity: 0; transform: translateX(-50%) rotate(-42deg) scaleX(0); }
+  to { opacity: 1; transform: translateX(-50%) rotate(-42deg) scaleX(1); }
+}
+
+/* Hero portrait: stronger but still controlled 3D tilt on pointer movement. */
+.hero-image {
+  transform-style: preserve-3d;
+  transform-origin: center center;
+  backface-visibility: hidden;
+  transition: box-shadow 260ms cubic-bezier(.22,.8,.25,1);
+}
+
+.hero-image > img {
+  transform: translate3d(var(--img-x, 0px), var(--img-y, 0px), 0) scale(var(--img-scale, 1));
+  transition: transform 280ms cubic-bezier(.22,.8,.25,1);
+  will-change: transform;
+}
+
+.hero-image:hover {
+  box-shadow: 0 38px 90px rgba(0, 0, 0, .25), 0 0 50px var(--glow-color);
+}
+
+/* Hero entrance: copy rises from below while the portrait enters from the side. */
+.hero-copy,
+.hero-visual {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.hero-copy {
+  transform: translate3d(0, 54px, 0);
+}
+
+.hero-visual {
+  transform: translate3d(72px, 0, 0);
+}
+
+.hero-copy.is-entered {
+  animation: hero-copy-in 850ms 80ms cubic-bezier(.22,.8,.25,1) forwards;
+}
+
+.hero-visual.is-entered {
+  animation: hero-image-in 950ms 180ms cubic-bezier(.22,.8,.25,1) forwards;
+}
+
+@keyframes hero-copy-in {
+  from { opacity: 0; transform: translate3d(0, 54px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes hero-image-in {
+  from { opacity: 0; transform: translate3d(72px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Mobile hero entrance uses the same delayed trigger, but with a shorter travel distance. */
+@media (max-width: 640px) {
+  .hero-copy {
+    transform: translate3d(0, 40px, 0);
+  }
+
+  .hero-visual {
+    transform: translate3d(45px, 0, 0);
+  }
+
+  @keyframes hero-copy-in {
+    from { opacity: 0; transform: translate3d(0, 40px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  @keyframes hero-image-in {
+    from { opacity: 0; transform: translate3d(45px, 0, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-loader {
+    transition: none;
+  }
+
+  .site-loader-name,
+  .site-loader-subtitle,
+  .site-loader-line,
+  .site-loader-line-slanted,
+  .hero-copy.is-entered,
+  .hero-visual.is-entered {
+    animation: none !important;
+  }
+
+  .hero-copy,
+  .hero-visual {
+    opacity: 1;
+    transform: none;
   }
 }

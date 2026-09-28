@@ -4,6 +4,10 @@ import { useEffect } from "react";
 
 export default function InteractiveBackground() {
   useEffect(() => {
+    // The background pointer glow is useful on desktop, but it is unnecessary
+    // work on touch devices where there is no persistent pointer.
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+
     const root = document.documentElement;
     let frame = 0;
 
