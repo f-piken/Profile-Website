@@ -9,6 +9,7 @@ function ProjectStack({ side = "left", items, onSelect }) {
   const [leaving, setLeaving] = useState(false);
   const cardRef = useRef(null);
   const animationRef = useRef(null);
+  const queuedRef = useRef(false);
 
   const current = items[index];
   const next = items[(index + 1) % items.length];
@@ -17,15 +18,24 @@ function ProjectStack({ side = "left", items, onSelect }) {
   const direction = side === "left" ? -1 : 1;
 
   const revealNext = useCallback(async () => {
-    if (leaving || items.length < 2 || !cardRef.current) return;
+    if (items.length < 2 || !cardRef.current) return;
+
+    // If the user clicks while a sheet is already moving, finish the current
+    // throw first. This prevents the DOM animation from being cancelled into
+    // a visibly broken state.
+    if (animationRef.current) {
+      queuedRef.current = true;
+      return;
+    }
 
     const card = cardRef.current;
     const width = card.offsetWidth;
     const height = card.offsetHeight;
-    const distance = Math.max(width * 1.2, 420);
-    const rotation = direction * 135;
+    const distance = Math.max(width * 1.08, 360);
+    const rotation = direction * 18;
 
     setLeaving(true);
+    queuedRef.current = false;
     animationRef.current?.cancel();
 
     const animation = card.animate(
@@ -36,29 +46,29 @@ function ProjectStack({ side = "left", items, onSelect }) {
           offset: 0,
         },
         {
-          transform: `translate3d(${direction * distance * 0.25}px, ${-height * 0.72}px, 0) rotate(${rotation * 0.22}deg) scale(.99)`,
+          transform: `translate3d(${direction * distance * 0.18}px, ${height * 0.04}px, 0) rotate(${rotation * 0.35}deg) scale(.998)`,
           opacity: 1,
-          offset: 0.25,
+          offset: 0.22,
         },
         {
-          transform: `translate3d(${direction * distance * 0.58}px, ${-height * 1.05}px, 0) rotate(${rotation * 0.5}deg) scale(.97)`,
-          opacity: 1,
-          offset: 0.52,
+          transform: `translate3d(${direction * distance * 0.48}px, ${-height * 0.08}px, 0) rotate(${rotation * 0.65}deg) scale(.99)`,
+          opacity: .98,
+          offset: 0.56,
         },
         {
-          transform: `translate3d(${direction * distance * 0.9}px, ${-height * 0.48}px, 0) rotate(${rotation * 0.78}deg) scale(.94)`,
-          opacity: 0.82,
-          offset: 0.78,
+          transform: `translate3d(${direction * distance * 0.78}px, ${height * 0.02}px, 0) rotate(${rotation * 0.88}deg) scale(.975)`,
+          opacity: .76,
+          offset: 0.82,
         },
         {
-          transform: `translate3d(${direction * distance}px, ${height * 0.18}px, 0) rotate(${rotation}deg) scale(.9)`,
+          transform: `translate3d(${direction * distance}px, ${height * 0.12}px, 0) rotate(${rotation}deg) scale(.96)`,
           opacity: 0,
           offset: 1,
         },
       ],
       {
-        duration: 920,
-        easing: "cubic-bezier(.2,.78,.24,1)",
+        duration: 1120,
+        easing: "cubic-bezier(.22,.72,.2,1)",
         fill: "forwards",
       },
     );
@@ -68,7 +78,8 @@ function ProjectStack({ side = "left", items, onSelect }) {
     try {
       await animation.finished;
     } catch {
-      return;
+      // A cancelled animation is reset below so the next interaction starts
+      // from a clean, stable card position.
     }
 
     if (animationRef.current !== animation) return;
@@ -82,9 +93,17 @@ function ProjectStack({ side = "left", items, onSelect }) {
       if (!cardRef.current) return;
       cardRef.current.style.opacity = "1";
       cardRef.current.style.transform = "none";
+      animationRef.current = null;
       setLeaving(false);
+
+      // One extra click can be queued safely; it starts only after the card
+      // has returned to a stable state.
+      if (queuedRef.current) {
+        queuedRef.current = false;
+        requestAnimationFrame(() => revealNext());
+      }
     });
-  }, [direction, items.length, leaving]);
+  }, [direction, items.length]);
 
   useEffect(() => () => animationRef.current?.cancel(), []);
 

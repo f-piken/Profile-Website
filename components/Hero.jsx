@@ -13,6 +13,8 @@ export default function Hero() {
   const [typedWord, setTypedWord] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [heroCycle, setHeroCycle] = useState(0);
+  const wasActiveRef = useRef(false);
 
   useEffect(() => {
     const currentWord = words[wordIndex];
@@ -37,38 +39,73 @@ export default function Hero() {
   }, [typedWord, isDeleting, wordIndex]);
 
   useEffect(() => {
-    const startHero = () => setLoaded(true);
+    const startHero = () => {
+      setLoaded(true);
+      wasActiveRef.current = true;
+      setHeroCycle((value) => value + 1);
+    };
 
-    // The hero entrance waits for the loader to finish so the animation
-    // is visible to the user instead of playing underneath the loader.
+    // The first entrance waits for the loader so it remains visible.
     window.addEventListener("portfolio:loaded", startHero);
     return () => window.removeEventListener("portfolio:loaded", startHero);
   }, []);
+
+  useEffect(() => {
+    const section = document.getElementById("home");
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!loaded) return;
+
+        if (entry.isIntersecting && !wasActiveRef.current) {
+          wasActiveRef.current = true;
+          setHeroCycle((value) => value + 1);
+        } else if (!entry.isIntersecting) {
+          wasActiveRef.current = false;
+        }
+      },
+      { threshold: 0.38 },
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [loaded]);
 
   useEffect(() => {
     const node = imageRef.current;
     if (!node) return;
 
     const update = () => {
-      const { x, y } = targetRef.current;
-      // Stronger 3D tilt while keeping the movement on the compositor.
-      node.style.setProperty("--rx", `${-y * 12}deg`);
-      node.style.setProperty("--ry", `${x * 12}deg`);
-      node.style.setProperty("--gx", `${x * 10}px`);
-      node.style.setProperty("--gy", `${y * 10}px`);
-      node.style.setProperty("--img-x", `${x * -10}px`);
-      node.style.setProperty("--img-y", `${y * -10}px`);
-      node.style.setProperty("--img-scale", `${1.04 + Math.abs(x) * 0.035 + Math.abs(y) * 0.035}`);
-      node.style.setProperty("--spot-x", `${50 + x * 45}%`);
-      node.style.setProperty("--spot-y", `${50 + y * 45}%`);
-      frameRef.current = 0;
+      const currentX = Number(node.style.getPropertyValue("--smooth-x")) || 0;
+      const currentY = Number(node.style.getPropertyValue("--smooth-y")) || 0;
+      const { x: targetX, y: targetY } = targetRef.current;
+      const x = currentX + (targetX - currentX) * 0.14;
+      const y = currentY + (targetY - currentY) * 0.14;
+
+      // Small, damped movement keeps the portrait responsive without the
+      // heavy "floating" effect that can make the edges look unstable.
+      node.style.setProperty("--smooth-x", x.toFixed(4));
+      node.style.setProperty("--smooth-y", y.toFixed(4));
+      node.style.setProperty("--rx", `${-y * 14}deg`);
+      node.style.setProperty("--ry", `${x * 14}deg`);
+      node.style.setProperty("--gx", `${x * 12}px`);
+      node.style.setProperty("--gy", `${y * 12}px`);
+      node.style.setProperty("--img-x", `${x * -8}px`);
+      node.style.setProperty("--img-y", `${y * -8}px`);
+      node.style.setProperty("--img-scale", `${1 + (Math.abs(x) + Math.abs(y)) * 0.018}`);
+      node.style.setProperty("--spot-x", `${50 + x * 35}%`);
+      node.style.setProperty("--spot-y", `${50 + y * 35}%`);
+
+      const settling = Math.abs(targetX - x) < 0.002 && Math.abs(targetY - y) < 0.002;
+      frameRef.current = settling ? 0 : requestAnimationFrame(update);
     };
 
     const move = (event) => {
       const rect = node.getBoundingClientRect();
       targetRef.current = {
-        x: ((event.clientX - rect.left) / rect.width - 0.5) * 2,
-        y: ((event.clientY - rect.top) / rect.height - 0.5) * 2,
+        x: Math.max(-1, Math.min(1, ((event.clientX - rect.left) / rect.width - 0.5) * 2)),
+        y: Math.max(-1, Math.min(1, ((event.clientY - rect.top) / rect.height - 0.5) * 2)),
       };
       if (!frameRef.current) frameRef.current = requestAnimationFrame(update);
     };
@@ -81,19 +118,29 @@ export default function Hero() {
     node.addEventListener("pointermove", move, { passive: true });
     node.addEventListener("pointerleave", leave, { passive: true });
 
+    // Reset the tilt whenever Hero becomes active again.
+    targetRef.current = { x: 0, y: 0 };
+    node.style.setProperty("--smooth-x", "0");
+    node.style.setProperty("--smooth-y", "0");
+    node.style.setProperty("--rx", "0deg");
+    node.style.setProperty("--ry", "0deg");
+    node.style.setProperty("--gx", "0px");
+    node.style.setProperty("--gy", "0px");
+
     return () => {
       node.removeEventListener("pointermove", move);
       node.removeEventListener("pointerleave", leave);
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      frameRef.current = 0;
     };
-  }, []);
+  }, [heroCycle, loaded]);
 
   return (
     <section id="home" className="relative flex min-h-screen items-center overflow-hidden px-4 pb-16 pt-28 sm:px-6 sm:pb-20 sm:pt-32 lg:px-8 lg:pb-24 lg:pt-36">
       <div className="hero-glow pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 opacity-70 blur-[65px] sm:h-[440px] sm:w-[440px]" />
 
       <div className="relative z-10 mx-auto grid w-full max-w-content items-center gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 xl:gap-20">
-        <div className={`hero-copy max-w-3xl ${loaded ? "is-entered" : ""}`}>
+        <div key={`hero-copy-${heroCycle}`} className={`hero-copy max-w-3xl ${loaded ? "is-entered" : ""}`}>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-[var(--surface)]/80 px-3.5 py-2 font-mono text-[11px] font-medium text-muted shadow-[var(--shadow-soft)] backdrop-blur-md sm:mb-7 sm:text-xs">
             <span className="relative grid h-2 w-2 place-items-center">
               <span className="absolute h-3 w-3 animate-[pulse-ring_2s_ease-in-out_infinite] rounded-full bg-primary/30" />
@@ -105,7 +152,7 @@ export default function Hero() {
           <p className="mb-4 font-mono text-xs font-medium uppercase tracking-[0.18em] text-primary sm:text-sm">Programmer / Portfolio</p>
 
           <h1 className="max-w-3xl font-display text-4xl font-extrabold leading-[1.05] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl xl:text-7xl">
-            <span className="block">Hi, I&apos;m Fiky Prayoga</span>
+            <span className="block whitespace-nowrap text-[clamp(1.5rem,6.7vw,4.5rem)]">Hi, I&apos;m Fiky Prayoga</span>
             <span className="mt-2 block min-h-[1.1em] bg-gradient-to-r from-primary via-secondary to-tertiary bg-clip-text text-transparent">
               {typedWord}<span className="ml-1 inline-block h-[0.85em] w-[2px] translate-y-1 animate-pulse bg-primary" />
             </span>
@@ -131,10 +178,10 @@ export default function Hero() {
           </div>
         </div>
 
-        <div ref={imageRef} className={`hero-visual relative mx-auto w-full max-w-[380px] lg:max-w-[340px] xl:max-w-[360px] ${loaded ? "is-entered" : ""}`}>
+        <div key={`hero-visual-${heroCycle}`} className={`hero-visual relative mx-auto w-full max-w-[380px] lg:max-w-[340px] xl:max-w-[360px] ${loaded ? "is-entered" : ""}`}>
           <div className="image-glow pointer-events-none absolute inset-10 rounded-[2rem] bg-primary/20 blur-[42px]" />
 
-          <div className="hero-image group relative mx-auto aspect-[4/5] w-full max-w-[320px] overflow-hidden rounded-[2rem] border border-border-strong bg-[var(--surface)] shadow-[0_24px_65px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out will-change-transform" style={{ transform: "perspective(1200px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(var(--gx, 0px), var(--gy, 0px), 18px)" }}>
+          <div ref={imageRef} className="hero-image group relative mx-auto aspect-[4/5] w-full max-w-[320px] overflow-hidden rounded-[2rem] border border-border-strong bg-[var(--surface)] shadow-[0_24px_65px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out will-change-transform" style={{ transform: "perspective(1200px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(var(--gx, 0px), var(--gy, 0px), 18px)" }}>
             <Image src="/images/profile.jpeg" alt="Fiky Prayoga" fill priority sizes="(max-width: 640px) 80vw, (max-width: 1024px) 340px, 360px" className="object-cover transition-transform duration-500 hover:scale-[1.025]" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 text-white sm:p-6">

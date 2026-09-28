@@ -36,49 +36,53 @@ export default function Experience() {
   const sectionRef = useRef(null);
   const itemRefs = useRef([]);
   const [activeCount, setActiveCount] = useState(0);
-  const frameRef = useRef(0);
-  const lastCountRef = useRef(0);
+  const [centeredItems, setCenteredItems] = useState(() => new Set());
 
   useEffect(() => {
-    const updateProgress = () => {
-      if (frameRef.current) return;
+    const cards = itemRefs.current.filter(Boolean);
+    if (!cards.length) return;
 
-      frameRef.current = requestAnimationFrame(() => {
-        frameRef.current = 0;
-        const section = sectionRef.current;
-        if (!section) return;
+    // Progress begins only when each card reaches the visual center of the viewport.
+    // The observer keeps this cheap while the CSS transition makes the bar move calmly.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const itemIndex = cards.indexOf(entry.target);
+          if (itemIndex === -1) return;
+          entry.target.dataset.centered = entry.isIntersecting ? "true" : "false";
+          if (entry.isIntersecting) {
+            setCenteredItems((current) => {
+              if (current.has(itemIndex)) return current;
+              const next = new Set(current);
+              next.add(itemIndex);
+              return next;
+            });
+          }
+        });
 
-        const rect = section.getBoundingClientRect();
-        const viewport = window.innerHeight;
-        const start = viewport * 0.82;
-        const end = viewport * 0.18;
-        const raw = (start - rect.top) / Math.max(1, rect.height - (start - end));
-        const nextProgress = Math.max(0, Math.min(1, raw));
+        // Progress is cumulative: once a milestone reaches the center, it stays completed.
+        setCenteredItems((current) => {
+          const nextCount = Math.max(0, Math.min(experiences.length, current.size));
+          setActiveCount((previous) => Math.max(previous, nextCount));
+          return current;
+        });
+      },
+      {
+        // Only the central 20% of the viewport activates a milestone.
+        rootMargin: "-40% 0px -40% 0px",
+        threshold: 0,
+      },
+    );
 
-        // Write the progress directly to CSS so scrolling does not re-render the whole section.
-        section.style.setProperty("--experience-progress", String(nextProgress));
-
-        // Only React-render when the next card actually crosses its reveal threshold.
-        const count = Math.min(
-          experiences.length,
-          Math.floor(nextProgress * experiences.length + 0.18),
-        );
-        if (count !== lastCountRef.current) {
-          lastCountRef.current = count;
-          setActiveCount(count);
-        }
-      });
-    };
-
-    updateProgress();
-    window.addEventListener("scroll", updateProgress, { passive: true });
-    window.addEventListener("resize", updateProgress);
-    return () => {
-      window.removeEventListener("scroll", updateProgress);
-      window.removeEventListener("resize", updateProgress);
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    };
+    cards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const progress = activeCount / Math.max(1, experiences.length);
+    sectionRef.current.style.setProperty("--experience-progress", String(progress));
+  }, [activeCount]);
 
   return (
     <section id="experience" ref={sectionRef} className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
@@ -99,7 +103,7 @@ export default function Experience() {
               <article
                 key={item.role}
                 ref={(node) => { itemRefs.current[itemIndex] = node; }}
-                className={`experience-item relative mb-8 last:mb-0 ${isActive ? "is-visible" : ""}`}
+                className={`experience-item relative mb-8 last:mb-0 ${centeredItems.has(itemIndex) ? "is-centered" : ""}`}
               >
                 <span className={`experience-dot absolute top-8 h-4 w-4 rounded-full border-4 border-[var(--background)] ${dotMap[item.color]} shadow-[0_0_18px_var(--glow-color)]`} />
                 <div className="rounded-panel border border-border bg-[var(--surface)]/90 p-5 shadow-[var(--shadow-soft)] transition hover:border-border-strong hover:shadow-[var(--shadow-glow)] sm:p-7">

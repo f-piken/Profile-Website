@@ -396,6 +396,7 @@
   isolation: isolate;
   cursor: pointer;
   overflow: visible;
+  perspective: 1100px;
 }
 .project-stack-card,
 .project-stack-back {
@@ -403,6 +404,7 @@
   inset: 0;
   overflow: hidden;
   border-radius: 1.35rem;
+  clip-path: inset(0 round 1.35rem);
 }
 .project-stack-back {
   border: 1px solid var(--border-strong);
@@ -417,16 +419,23 @@
   z-index: 2;
   border: 1px solid var(--border-strong);
   background: var(--surface-high);
-  box-shadow: 0 24px 70px rgba(0,0,0,.18);
+  box-shadow: 0 20px 56px rgba(0,0,0,.15);
   transform: none;
-  transition: box-shadow 280ms ease;
+  transition: transform 560ms cubic-bezier(.22,.8,.25,1), box-shadow 560ms cubic-bezier(.22,.8,.25,1);
   will-change: transform, opacity;
   transform-origin: 50% 50%;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
-.project-stack:hover .project-stack-card:not(.is-throwing) {
-  box-shadow: 0 28px 80px rgba(0,0,0,.22);
+.project-stack:hover .project-stack-card:not(.is-leaving) {
+  transform: translate3d(0, -8px, 0) rotateX(1.6deg) rotateY(-1.6deg) scale(1.012);
+  box-shadow: 0 28px 70px rgba(0,0,0,.20), 0 0 28px var(--glow-color);
+}
+.project-stack-right .project-stack:hover .project-stack-card:not(.is-leaving) {
+  transform: translate3d(0, -8px, 0) rotateX(1.6deg) rotateY(1.6deg) scale(1.012);
+}
+.project-stack:focus-visible .project-stack-card:not(.is-leaving) {
+  transform: translate3d(0, -6px, 0) scale(1.008);
 }
 .project-stack.is-leaving .project-stack-card {
   z-index: 4;
@@ -510,8 +519,8 @@
 .experience-progress-track {
   position: absolute;
   left: 50%;
-  top: 0;
-  bottom: 0;
+  top: 1.75rem;
+  bottom: 1.75rem;
   width: 2px;
   overflow: hidden;
   background: var(--border);
@@ -525,22 +534,25 @@
   border-radius: inherit;
   transform-origin: top center;
   transform: scaleY(var(--experience-progress, 0));
-  transition: transform 180ms linear;
+  transition: transform 950ms cubic-bezier(.22,.8,.25,1);
   box-shadow: 0 0 16px var(--glow-color);
   will-change: transform;
 }
 .experience-item {
   position: relative;
   width: calc(50% - 34px);
-  opacity: 0;
-  transform: translate3d(0, 36px, 0) scale(.98);
-  transition: opacity 620ms cubic-bezier(.22,.8,.25,1), transform 700ms cubic-bezier(.22,.8,.25,1);
+  opacity: 1;
+  transform: translate3d(0, 28px, 0) scale(.985);
+  transition: transform 850ms cubic-bezier(.22,.8,.25,1), filter 850ms ease;
+  filter: blur(0);
   z-index: 1;
 }
-.experience-item.is-visible {
-  opacity: 1;
+.experience-item:nth-of-type(odd) { transform: translate3d(-28px, 18px, 0) scale(.985); }
+.experience-item:nth-of-type(even) { transform: translate3d(28px, 18px, 0) scale(.985); }
+.experience-item.is-centered {
   transform: translate3d(0, 0, 0) scale(1);
 }
+
 
 .experience-item > div {
   transition: border-color 320ms ease, box-shadow 420ms ease, transform 420ms cubic-bezier(.22,.8,.25,1);
@@ -564,18 +576,16 @@
 }
 
 /* Mobile experience is intentionally one-directional instead of alternating. */
-@media (max-width: 640px) {
-  .project-showcase { gap: 3.75rem; }
-  .project-stack-area { aspect-ratio: 1.18 / 1; }
-  .project-stack-card, .project-stack-back { border-radius: 1rem; }
-  .project-stack-back-one { transform: rotate(-3.5deg) translate(-8px, 6px); }
-  .project-stack-hint { left: .75rem; bottom: .75rem; }
+@media (max-width: 900px) {
+  .experience-timeline {
+    padding-left: 2.25rem;
+  }
 
-  .experience-timeline { padding-left: 2rem; }
   .experience-progress-track {
-    left: .65rem;
+    left: .75rem;
     transform: translateX(-50%);
   }
+
   .experience-item,
   .experience-item:nth-of-type(odd),
   .experience-item:nth-of-type(even) {
@@ -585,11 +595,49 @@
     padding-left: 0;
     padding-right: 0;
   }
+
   .experience-item:nth-of-type(odd) .experience-dot,
   .experience-item:nth-of-type(even) .experience-dot {
-    left: calc(-2rem + .65rem - 8px);
+    left: calc(-2.25rem + .75rem - 8px);
     right: auto;
   }
+
+  .experience-item,
+  .experience-item:nth-of-type(odd),
+  .experience-item:nth-of-type(even) {
+    transform: translate3d(0, 30px, 0) scale(.985);
+  }
+
+  .experience-item.is-centered {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .experience-timeline {
+    min-width: 0;
+  }
+
+  .experience-item > div {
+    min-width: 0;
+  }
+
+  .experience-item h3 {
+    overflow-wrap: anywhere;
+  }
+
+  .experience-item .font-mono {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 640px) {
+  .project-showcase { gap: 3.75rem; }
+  .project-stack-area { aspect-ratio: 1.18 / 1; }
+  .project-stack-card, .project-stack-back { border-radius: 1rem; }
+  .project-stack-back-one { transform: rotate(-3.5deg) translate(-8px, 6px); }
+  .project-stack-hint { left: .75rem; bottom: .75rem; }
+
   .experience-item > div { padding: 1rem; }
   .experience-item h3 { font-size: .95rem; line-height: 1.3; }
   .experience-item p { margin-top: .8rem; font-size: .72rem; line-height: 1.6; }
@@ -607,7 +655,9 @@
     transition: none !important;
     animation: none !important;
   }
-  .experience-item { opacity: 1; transform: none; }
+  .experience-item,
+  .experience-item:nth-of-type(odd),
+  .experience-item:nth-of-type(even) { opacity: 1; transform: none; }
 }
 
 /* Initial portfolio loader — inspired by the minimal editorial loading screen. */
@@ -704,17 +754,22 @@
   transform-style: preserve-3d;
   transform-origin: center center;
   backface-visibility: hidden;
-  transition: box-shadow 260ms cubic-bezier(.22,.8,.25,1);
+  overflow: hidden;
+  clip-path: inset(0 round 2rem);
+  contain: paint;
+  transition: box-shadow 520ms cubic-bezier(.22,.8,.25,1);
+  transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(var(--gx, 0px), var(--gy, 0px), 22px);
 }
 
 .hero-image > img {
-  transform: translate3d(var(--img-x, 0px), var(--img-y, 0px), 0) scale(var(--img-scale, 1));
-  transition: transform 280ms cubic-bezier(.22,.8,.25,1);
+  transform: translate3d(var(--img-x, 0px), var(--img-y, 0px), 18px) scale(var(--img-scale, 1));
+  transition: transform 100ms cubic-bezier(.22,.8,.25,1);
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 .hero-image:hover {
-  box-shadow: 0 38px 90px rgba(0, 0, 0, .25), 0 0 50px var(--glow-color);
+  box-shadow: 0 30px 72px rgba(0, 0, 0, .18), 0 0 34px var(--glow-color);
 }
 
 /* Hero entrance: copy rises from below while the portrait enters from the side. */
