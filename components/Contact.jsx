@@ -12,7 +12,7 @@ export default function Contact() {
 
   const copyEmail = async () => {
     try {
-      await navigator.clipboard.writeText("mikael.reza.studio@gmail.com");
+      await navigator.clipboard.writeText("fikypray@gmail.com");
       setCopied(true);
       setTimeout(() => setCopied(false), 2200);
     } catch {
