@@ -49,14 +49,9 @@ export default function Contact() {
               <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">Direct Channel</span>
               <button onClick={copyEmail} className="mt-3 flex w-full items-center gap-3 text-left text-sm transition hover:text-primary">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">◎</span>
-                <strong className="min-w-0 flex-1 truncate text-foreground">mikael.reza.studio@gmail.com</strong>
+                <strong className="min-w-0 flex-1 truncate text-foreground">fikypray@gmail.com</strong>
                 <small className="text-muted">{copied ? "Disalin!" : "Salin"}</small>
               </button>
-              <div className="mt-4 flex gap-2">
-                {[["GH", "GitHub"], ["in", "LinkedIn"], ["X", "Twitter"], ["Dr", "Dribbble"]].map(([label, name]) => (
-                  <a key={name} href="#" aria-label={name} className="grid h-9 w-9 place-items-center rounded-xl border border-border bg-[var(--surface)] font-mono text-[10px] font-semibold text-muted transition hover:border-primary/50 hover:bg-primary-soft hover:text-primary">{label}</a>
-                ))}
-              </div>
             </div>
           </div>
 
